@@ -29,17 +29,27 @@ if (USE_MOCK_DB) {
     const { Pool } = require('pg');
 
     // Create connection pool
-    pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT) || 5432,
-      database: process.env.DB_NAME || 'ubertruck_db',
-      user: process.env.DB_USER || 'ubertruck_user',
-      password: process.env.DB_PASSWORD,
-      max: 20,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    });
+    // Supports both DATABASE_URL (Render/Neon/Heroku standard) and individual vars
+    const poolConfig = process.env.DATABASE_URL
+      ? {
+          connectionString: process.env.DATABASE_URL,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 10000,
+          ssl: { rejectUnauthorized: false }, // Required for Neon and most cloud DBs
+        }
+      : {
+          host: process.env.DB_HOST || 'localhost',
+          port: parseInt(process.env.DB_PORT) || 5432,
+          database: process.env.DB_NAME || 'ubertruck_db',
+          user: process.env.DB_USER || 'ubertruck_user',
+          password: process.env.DB_PASSWORD,
+          max: 20,
+          idleTimeoutMillis: 30000,
+          connectionTimeoutMillis: 2000,
+          ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
+        };
+    pool = new Pool(poolConfig);
 
     // Test database connection
     initializeDatabase = async function() {

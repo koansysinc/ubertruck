@@ -295,6 +295,28 @@
       "validationReport": "/home/koans/projects/ubertruck/TROUBLESHOOTING_VALIDATION_REPORT.md"
     }
   },
+  "productionDeployment": {
+    "status": "FIXING",
+    "backendUrl": "https://ubertruck.onrender.com",
+    "frontendUrl": "https://ubertruck-29vya4iic-koansysincs-projects.vercel.app",
+    "incidentDetectedAt": "2026-02-17T14:00:00Z",
+    "rootCauses": [
+      "CAUSE-001: connection.js only read DB_HOST/DB_USER/DB_PASSWORD vars, not DATABASE_URL. Render sets DATABASE_URL only. Server crashed at startup with process.exit(1).",
+      "CAUSE-002: CORS_ORIGIN set to https://ubertruck.vercel.app but actual frontend is https://ubertruck-29vya4iic-koansysincs-projects.vercel.app. All API calls rejected."
+    ],
+    "fixes": [
+      "FIX-001: src/database/connection.js - Added DATABASE_URL parsing with ssl:rejectUnauthorized:false for Neon compatibility",
+      "FIX-002: src/index.js - CORS now hardcodes Vercel preview URL AND supports comma-separated CORS_ORIGIN list",
+      "FIX-003: render.yaml - Updated CORS_ORIGIN to include both Vercel URLs"
+    ],
+    "verifiedAt": "NOT_TESTED_YET - requires push to GitHub and Render redeploy",
+    "userAffected": {
+      "phone": "+917995465189",
+      "business": "ABC logistics",
+      "role": "SHIPPER",
+      "status": "BLOCKED - backend down, will work after redeploy"
+    }
+  },
   "protocolEnforcement": {
     "repositoryClaudeMd": "/home/koans/projects/CLAUDE.md",
     "projectClaudeMd": "/home/koans/projects/ubertruck/CLAUDE.md",

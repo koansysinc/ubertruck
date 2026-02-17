@@ -22,6 +22,6 @@ services:
       - key: USE_MOCK_REDIS
         value: true
       - key: CORS_ORIGIN
-        value: https://ubertruck.vercel.app
+        value: https://ubertruck.vercel.app,https://ubertruck-29vya4iic-koansysincs-projects.vercel.app
       - key: LOG_LEVEL
         value: info

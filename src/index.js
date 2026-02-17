@@ -90,11 +90,18 @@ app.use((req, res, next) => {
 // CORS configuration for production
 const corsOptions = {
   origin: function(origin, callback) {
+    // CORS_ORIGIN can be a comma-separated list of origins
+    const extraOrigins = process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+      : [];
+
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       'https://ubertruck.vercel.app',
-      process.env.CORS_ORIGIN
+      // Vercel preview URL for current deployment
+      'https://ubertruck-29vya4iic-koansysincs-projects.vercel.app',
+      ...extraOrigins
     ].filter(Boolean);
 
     // Allow requests with no origin (like mobile apps or Postman)
