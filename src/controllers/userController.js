@@ -65,11 +65,9 @@ class UserController {
         role: user.role
       };
 
-      // Only include OTP in development mode
-      if (process.env.NODE_ENV !== 'production') {
-        response.otp = otp;
-        response.dev_message = 'OTP included for testing only';
-      }
+      // TEMPORARY: Always include OTP for demo purposes
+      response.otp = otp;
+      response.dev_message = 'OTP included for demo purposes';
 
       res.status(201).json(response);
     } catch (error) {
@@ -123,11 +121,9 @@ class UserController {
         sessionId: sessionId
       };
 
-      // Only include OTP in development mode
-      if (process.env.NODE_ENV !== 'production') {
-        response.otp = otp;
-        response.dev_message = 'OTP included for testing only';
-      }
+      // TEMPORARY: Always include OTP for demo purposes
+      response.otp = otp;
+      response.dev_message = 'OTP included for demo purposes';
 
       res.json(response);
     } catch (error) {
@@ -506,11 +502,9 @@ class UserController {
         message: 'OTP resent successfully'
       };
 
-      // Only include OTP in development mode
-      if (process.env.NODE_ENV !== 'production') {
-        response.otp = otp;
-        response.dev_message = 'OTP included for testing only';
-      }
+      // TEMPORARY: Always include OTP for demo purposes
+      response.otp = otp;
+      response.dev_message = 'OTP included for demo purposes';
 
       res.json(response);
     } catch (error) {
