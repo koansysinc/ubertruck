@@ -1,0 +1,25 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "build",
+  "framework": "create-react-app",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ],
+  "env": {
+    "REACT_APP_API_BASE_URL": "https://ubertruck-api.onrender.com",
+    "REACT_APP_ENVIRONMENT": "production",
+    "TSC_COMPILE_ON_ERROR": "true",
+    "SKIP_PREFLIGHT_CHECK": "true"
+  }
+}

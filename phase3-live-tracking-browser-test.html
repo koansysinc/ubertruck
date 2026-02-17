@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 3: Live Tracking - Browser Manual Testing</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .status-bar {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.connected { background: #4CAF50; }
+        .status-indicator.disconnected { background: #f44336; animation: none; }
+        .status-indicator.connecting { background: #FFC107; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(76, 175, 80, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .test-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .test-section h2 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .test-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-group input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #FFC107;
+            color: #333;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .output-box {
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 150px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-time {
+            color: #999;
+            font-size: 11px;
+        }
+
+        .log-success {
+            color: #4CAF50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-info {
+            color: #2196F3;
+        }
+
+        .log-warning {
+            color: #FFC107;
+        }
+
+        .map-container {
+            background: #f0f0f0;
+            border-radius: 8px;
+            height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-canvas {
+            width: 100%;
+            height: 100%;
+            background: #e8f4fd;
+            position: relative;
+        }
+
+        .driver-marker {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+        }
+
+        .route-line {
+            position: absolute;
+            background: #667eea;
+            opacity: 0.3;
+            height: 2px;
+        }
+
+        .test-result {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .test-result.success {
+            background: #e8f5e9;
+            border: 1px solid #4CAF50;
+            color: #2e7d32;
+        }
+
+        .test-result.error {
+            background: #ffebee;
+            border: 1px solid #f44336;
+            color: #c62828;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚚 UberTruck Phase 3: Live Tracking</h1>
+            <div class="subtitle">Manual Browser Testing Suite - Nalgonda to Miryalguda Route</div>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-indicator disconnected" id="apiStatus"></span>
+                <span>API: <span id="apiStatusText">Checking...</span></span>
+            </div>
+            <div class="status-item">
+                <span class="status-indicator disconnected" id="wsStatus"></span>
+                <span>WebSocket: <span id="wsStatusText">Disconnected</span></span>
+            </div>
+            <div class="status-item">
+                <span>Tests Passed: <span id="testsPassed">0</span> / <span id="testsTotal">0</span></span>
+            </div>
+            <div class="status-item">
+                <button class="btn-primary" onclick="runAllTests()">Run All Tests</button>
+            </div>
+        </div>
+
+        <!-- Test Grid -->
+        <div class="test-grid">
+            <!-- WebSocket Connection Test -->
+            <div class="test-section">
+                <h2>1. WebSocket Connection</h2>
+                <div class="test-controls">
+                    <div class="control-group">
+                        <input type="text" id="wsUrl" value="ws://localhost:4001/ws" placeholder="WebSocket URL">
+                        <button class="btn-primary" onclick="testWebSocket()">Connect</button>
+                        <button class="btn-danger" onclick="disconnectWebSocket()">Disconnect</button>
+                    </div>
+                    <div class="control-group">
+                        <input type="text" id="bookingIdWs" placeholder="Booking ID" value="BOOK-TEST-123">
+                        <button class="btn-success" onclick="subscribeToBooking()">Subscribe</button>
+                    </div>
+                </div>
+                <div class="output-box" id="wsOutput">
+                    <div class="log-entry log-info">WebSocket test ready...</div>
+                </div>
+            </div>
+
+            <!-- Distance Calculation Test -->
+            <div class="test-section">
+                <h2>2. Distance Calculation</h2>
+                <div class="test-controls">
+                    <div class="control-group">
+                        <input type="text" id="lat1" placeholder="Start Lat" value="17.0477">
+                        <input type="text" id="lng1" placeholder="Start Lng" value="79.2666">
+                    </div>
+                    <div class="control-group">
+                        <input type="text" id="lat2" placeholder="End Lat" value="16.8700">
+                        <input type="text" id="lng2" placeholder="End Lng" value="79.5900">
+                    </div>
+                    <button class="btn-primary" onclick="testDistanceCalculation()">Calculate</button>
+                </div>
+                <div class="output-box" id="distanceOutput">
+                    <div class="log-entry log-info">Distance calculation ready...</div>
+                </div>
+            </div>
+
+            <!-- Location Simulation Control -->
+            <div class="test-section">
+                <h2>3. Location Simulation</h2>
+                <div class="test-controls">
+                    <div class="control-group">
+                        <input type="text" id="bookingIdSim" placeholder="Booking ID" value="BOOK-SIM-123">
+                        <input type="text" id="driverIdSim" placeholder="Driver ID" value="DRIVER-456">
+                    </div>
+                    <div class="control-group">
+                        <button class="btn-success" onclick="startSimulation()">Start</button>
+                        <button class="btn-danger" onclick="stopSimulation()">Stop</button>
+                        <button class="btn-warning" onclick="getActiveSimulations()">Get Active</button>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="simulationProgress" style="width: 0%">0%</div>
+                </div>
+                <div class="output-box" id="simulationOutput">
+                    <div class="log-entry log-info">Simulation control ready...</div>
+                </div>
+            </div>
+
+            <!-- Driver Location Update -->
+            <div class="test-section">
+                <h2>4. Driver Location Update</h2>
+                <div class="test-controls">
+                    <div class="control-group">
+                        <input type="text" id="driverIdUpdate" placeholder="Driver ID" value="DRIVER-789">
+                    </div>
+                    <div class="control-group">
+                        <input type="text" id="latUpdate" placeholder="Latitude" value="17.0477">
+                        <input type="text" id="lngUpdate" placeholder="Longitude" value="79.2666">
+                    </div>
+                    <div class="control-group">
+                        <input type="text" id="speedUpdate" placeholder="Speed (km/h)" value="40">
+                        <input type="text" id="headingUpdate" placeholder="Heading" value="45">
+                    </div>
+                    <button class="btn-primary" onclick="updateDriverLocation()">Update Location</button>
+                    <button class="btn-success" onclick="getDriverLocation()">Get Location</button>
+                </div>
+                <div class="output-box" id="locationUpdateOutput">
+                    <div class="log-entry log-info">Location update ready...</div>
+                </div>
+            </div>
+
+            <!-- Live Tracking Map -->
+            <div class="test-section" style="grid-column: span 2;">
+                <h2>5. Live Tracking Visualization</h2>
+                <div class="map-container">
+                    <div class="map-canvas" id="mapCanvas">
+                        <div class="driver-marker" id="driverMarker" style="display: none;"></div>
+                        <div style="padding: 20px; text-align: center; color: #666;">
+                            <h3>Route: Nalgonda → Miryalguda</h3>
+                            <p>Distance: 39.67 km | ETA: 48 minutes</p>
+                            <p style="margin-top: 10px;">Start simulation to see live tracking</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statSpeed">0</div>
+                        <div class="stat-label">Speed (km/h)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statDistance">0</div>
+                        <div class="stat-label">Distance (km)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statETA">0</div>
+                        <div class="stat-label">ETA (min)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="statUpdates">0</div>
+                        <div class="stat-label">Updates</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Test Results Summary -->
+            <div class="test-section" style="grid-column: span 2;">
+                <h2>Test Results Summary</h2>
+                <div class="output-box" id="testSummary" style="min-height: 300px;">
+                    <div class="log-entry log-info">Test results will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let ws = null;
+        let authToken = null;
+        let testResults = [];
+        let updateCount = 0;
+        const API_BASE = 'http://localhost:4000/api/v1';
+
+        // Initialize on page load
+        window.onload = function() {
+            checkAPIHealth();
+            getAuthToken();
+        };
+
+        // Check API health
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch('http://localhost:4000/health');
+                const data = await response.json();
+
+                if (data.status === 'healthy') {
+                    updateStatus('apiStatus', 'connected');
+                    updateStatus('apiStatusText', 'Connected');
+                    addLog('testSummary', 'API health check passed', 'success');
+                }
+            } catch (error) {
+                updateStatus('apiStatus', 'disconnected');
+                updateStatus('apiStatusText', 'Disconnected');
+                addLog('testSummary', 'API health check failed: ' + error.message, 'error');
+            }
+        }
+
+        // Get authentication token
+        async function getAuthToken() {
+            try {
+                // Register/login as driver
+                const phoneNumber = '9876543210';
+
+                // Try to register (might already exist)
+                await fetch(`${API_BASE}/users/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phoneNumber,
+                        role: 'driver',
+                        businessName: 'Test Driver'
+                    })
+                }).catch(() => {});
+
+                // Request OTP
+                const loginRes = await fetch(`${API_BASE}/users/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phoneNumber })
+                });
+                const loginData = await loginRes.json();
+
+                // Verify OTP
+                const verifyRes = await fetch(`${API_BASE}/users/verify-otp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phoneNumber,
+                        otp: loginData.otp,
+                        sessionId: loginData.sessionId
+                    })
+                });
+                const verifyData = await verifyRes.json();
+
+                authToken = verifyData.token;
+                addLog('testSummary', 'Authentication successful', 'success');
+            } catch (error) {
+                addLog('testSummary', 'Authentication failed: ' + error.message, 'error');
+            }
+        }
+
+        // WebSocket test
+        function testWebSocket() {
+            const url = document.getElementById('wsUrl').value;
+            addLog('wsOutput', `Connecting to ${url}...`, 'info');
+
+            if (ws) {
+                ws.close();
+            }
+
+            ws = new WebSocket(url);
+
+            ws.onopen = function() {
+                updateStatus('wsStatus', 'connected');
+                updateStatus('wsStatusText', 'Connected');
+                addLog('wsOutput', 'WebSocket connected successfully', 'success');
+                addTestResult('WebSocket Connection', true);
+            };
+
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                addLog('wsOutput', 'Message: ' + JSON.stringify(data, null, 2), 'info');
+
+                // Handle location updates
+                if (data.type === 'location_update') {
+                    updateCount++;
+                    updateMapPosition(data);
+                    updateStats(data);
+                    addTestResult('Location Update Received', true);
+                }
+            };
+
+            ws.onerror = function(error) {
+                updateStatus('wsStatus', 'disconnected');
+                updateStatus('wsStatusText', 'Error');
+                addLog('wsOutput', 'WebSocket error: ' + error, 'error');
+                addTestResult('WebSocket Connection', false);
+            };
+
+            ws.onclose = function() {
+                updateStatus('wsStatus', 'disconnected');
+                updateStatus('wsStatusText', 'Disconnected');
+                addLog('wsOutput', 'WebSocket disconnected', 'warning');
+            };
+        }
+
+        // Disconnect WebSocket
+        function disconnectWebSocket() {
+            if (ws) {
+                ws.close();
+                ws = null;
+                addLog('wsOutput', 'WebSocket disconnected by user', 'warning');
+            }
+        }
+
+        // Subscribe to booking updates
+        function subscribeToBooking() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addLog('wsOutput', 'WebSocket not connected', 'error');
+                return;
+            }
+
+            const bookingId = document.getElementById('bookingIdWs').value;
+            const message = {
+                type: 'subscribe',
+                bookingId: bookingId
+            };
+
+            ws.send(JSON.stringify(message));
+            addLog('wsOutput', `Subscribing to booking ${bookingId}...`, 'info');
+        }
+
+        // Test distance calculation
+        async function testDistanceCalculation() {
+            try {
+                const lat1 = parseFloat(document.getElementById('lat1').value);
+                const lng1 = parseFloat(document.getElementById('lng1').value);
+                const lat2 = parseFloat(document.getElementById('lat2').value);
+                const lng2 = parseFloat(document.getElementById('lng2').value);
+
+                addLog('distanceOutput', 'Calculating distance...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/distance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        point1: { lat: lat1, lng: lng1 },
+                        point2: { lat: lat2, lng: lng2 }
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('distanceOutput', `Distance: ${data.distance} km`, 'success');
+                    addLog('distanceOutput', `Estimated Time: ${data.estimatedTime} minutes`, 'success');
+                    addLog('distanceOutput', `Unit: ${data.unit}`, 'info');
+                    addTestResult('Distance Calculation', true);
+                } else {
+                    addLog('distanceOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Distance Calculation', false);
+                }
+            } catch (error) {
+                addLog('distanceOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Distance Calculation', false);
+            }
+        }
+
+        // Start simulation
+        async function startSimulation() {
+            try {
+                const bookingId = document.getElementById('bookingIdSim').value;
+                const driverId = document.getElementById('driverIdSim').value;
+
+                addLog('simulationOutput', 'Starting simulation...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/simulate/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bookingId, driverId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('simulationOutput', 'Simulation started successfully', 'success');
+                    addLog('simulationOutput', `Booking: ${bookingId}, Driver: ${driverId}`, 'info');
+                    addTestResult('Start Simulation', true);
+
+                    // Auto-subscribe to WebSocket updates
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'subscribe', bookingId }));
+                    }
+                } else {
+                    addLog('simulationOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Start Simulation', false);
+                }
+            } catch (error) {
+                addLog('simulationOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Start Simulation', false);
+            }
+        }
+
+        // Stop simulation
+        async function stopSimulation() {
+            try {
+                const bookingId = document.getElementById('bookingIdSim').value;
+
+                addLog('simulationOutput', 'Stopping simulation...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/simulate/stop`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bookingId })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('simulationOutput', 'Simulation stopped successfully', 'success');
+                    addTestResult('Stop Simulation', true);
+                } else {
+                    addLog('simulationOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Stop Simulation', false);
+                }
+            } catch (error) {
+                addLog('simulationOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Stop Simulation', false);
+            }
+        }
+
+        // Get active simulations
+        async function getActiveSimulations() {
+            try {
+                addLog('simulationOutput', 'Fetching active simulations...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/simulate/active`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('simulationOutput', `Active simulations: ${data.count}`, 'success');
+                    data.simulations.forEach(sim => {
+                        addLog('simulationOutput',
+                            `Booking: ${sim.bookingId}, Progress: ${sim.progress}%, Speed: ${sim.speed} km/h`,
+                            'info');
+
+                        // Update progress bar
+                        const progressBar = document.getElementById('simulationProgress');
+                        progressBar.style.width = sim.progress + '%';
+                        progressBar.textContent = sim.progress + '%';
+                    });
+                    addTestResult('Get Active Simulations', true);
+                } else {
+                    addLog('simulationOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Get Active Simulations', false);
+                }
+            } catch (error) {
+                addLog('simulationOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Get Active Simulations', false);
+            }
+        }
+
+        // Update driver location
+        async function updateDriverLocation() {
+            try {
+                const driverId = document.getElementById('driverIdUpdate').value;
+                const lat = parseFloat(document.getElementById('latUpdate').value);
+                const lng = parseFloat(document.getElementById('lngUpdate').value);
+                const speed = parseFloat(document.getElementById('speedUpdate').value);
+                const heading = parseFloat(document.getElementById('headingUpdate').value);
+
+                if (!authToken) {
+                    addLog('locationUpdateOutput', 'No auth token, getting one...', 'warning');
+                    await getAuthToken();
+                }
+
+                addLog('locationUpdateOutput', 'Updating driver location...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({
+                        driverId, lat, lng, speed, heading,
+                        accuracy: 10
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('locationUpdateOutput', 'Location updated successfully', 'success');
+                    addLog('locationUpdateOutput', `Position: ${lat}, ${lng}`, 'info');
+                    addTestResult('Update Driver Location', true);
+                } else {
+                    addLog('locationUpdateOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Update Driver Location', false);
+                }
+            } catch (error) {
+                addLog('locationUpdateOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Update Driver Location', false);
+            }
+        }
+
+        // Get driver location
+        async function getDriverLocation() {
+            try {
+                const driverId = document.getElementById('driverIdUpdate').value;
+
+                addLog('locationUpdateOutput', 'Getting driver location...', 'info');
+
+                const response = await fetch(`${API_BASE}/location/driver/${driverId}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    addLog('locationUpdateOutput', 'Location retrieved successfully', 'success');
+                    addLog('locationUpdateOutput', `Position: ${data.location.lat}, ${data.location.lng}`, 'info');
+                    addLog('locationUpdateOutput', `Speed: ${data.location.speed} km/h`, 'info');
+                    addLog('locationUpdateOutput', `Last updated: ${data.location.timestamp}`, 'info');
+                    addTestResult('Get Driver Location', true);
+                } else {
+                    addLog('locationUpdateOutput', 'Error: ' + JSON.stringify(data), 'error');
+                    addTestResult('Get Driver Location', false);
+                }
+            } catch (error) {
+                addLog('locationUpdateOutput', 'Error: ' + error.message, 'error');
+                addTestResult('Get Driver Location', false);
+            }
+        }
+
+        // Update map position
+        function updateMapPosition(data) {
+            const marker = document.getElementById('driverMarker');
+            const mapCanvas = document.getElementById('mapCanvas');
+
+            if (data.location) {
+                marker.style.display = 'block';
+
+                // Convert lat/lng to pixel position (simplified)
+                const lat = data.location.lat;
+                const lng = data.location.lng;
+
+                // Map bounds (Nalgonda to Miryalguda)
+                const latRange = [16.8700, 17.0477];
+                const lngRange = [79.2666, 79.5900];
+
+                // Calculate position
+                const x = ((lng - lngRange[0]) / (lngRange[1] - lngRange[0])) * mapCanvas.offsetWidth;
+                const y = ((latRange[1] - lat) / (latRange[1] - latRange[0])) * mapCanvas.offsetHeight;
+
+                marker.style.left = x + 'px';
+                marker.style.top = y + 'px';
+            }
+        }
+
+        // Update stats
+        function updateStats(data) {
+            if (data.location) {
+                document.getElementById('statSpeed').textContent = Math.round(data.location.speed || 0);
+                document.getElementById('statUpdates').textContent = updateCount;
+            }
+            if (data.route) {
+                document.getElementById('statDistance').textContent = parseFloat(data.route.remainingDistance || 0).toFixed(1);
+                document.getElementById('statETA').textContent = data.route.remainingTime || 0;
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            testResults = [];
+            updateCount = 0;
+
+            addLog('testSummary', '=== STARTING ALL TESTS ===', 'info');
+
+            // Test 1: API Health
+            await checkAPIHealth();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Test 2: WebSocket Connection
+            testWebSocket();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Test 3: Distance Calculation
+            await testDistanceCalculation();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Test 4: Start Simulation
+            document.getElementById('bookingIdSim').value = 'BOOK-AUTO-' + Date.now();
+            await startSimulation();
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // Test 5: Get Active Simulations
+            await getActiveSimulations();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Test 6: Update Driver Location
+            await updateDriverLocation();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Test 7: Get Driver Location
+            await getDriverLocation();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Wait for WebSocket updates
+            addLog('testSummary', 'Waiting 10 seconds for location updates...', 'info');
+            await new Promise(resolve => setTimeout(resolve, 10000));
+
+            // Test 8: Stop Simulation
+            await stopSimulation();
+
+            // Summary
+            showTestSummary();
+        }
+
+        // Show test summary
+        function showTestSummary() {
+            const passed = testResults.filter(r => r.status).length;
+            const total = testResults.length;
+
+            document.getElementById('testsPassed').textContent = passed;
+            document.getElementById('testsTotal').textContent = total;
+
+            addLog('testSummary', '=== TEST SUMMARY ===', 'info');
+            addLog('testSummary', `Total Tests: ${total}`, 'info');
+            addLog('testSummary', `Passed: ${passed}`, 'success');
+            addLog('testSummary', `Failed: ${total - passed}`, passed === total ? 'info' : 'error');
+            addLog('testSummary', `Pass Rate: ${((passed/total) * 100).toFixed(1)}%`,
+                   passed === total ? 'success' : 'warning');
+
+            // List failed tests
+            const failed = testResults.filter(r => !r.status);
+            if (failed.length > 0) {
+                addLog('testSummary', '--- Failed Tests ---', 'error');
+                failed.forEach(test => {
+                    addLog('testSummary', `❌ ${test.name}`, 'error');
+                });
+            }
+
+            // Overall result
+            if (passed === total) {
+                addLog('testSummary', '✅ ALL TESTS PASSED!', 'success');
+            } else {
+                addLog('testSummary', '❌ SOME TESTS FAILED', 'error');
+            }
+        }
+
+        // Add test result
+        function addTestResult(name, status) {
+            testResults.push({ name, status });
+            addLog('testSummary', `${status ? '✅' : '❌'} ${name}`, status ? 'success' : 'error');
+        }
+
+        // Add log entry
+        function addLog(outputId, message, type = 'info') {
+            const output = document.getElementById(outputId);
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+
+            const time = new Date().toLocaleTimeString();
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // Update status
+        function updateStatus(elementId, value) {
+            const element = document.getElementById(elementId);
+            if (element.classList.contains('status-indicator')) {
+                element.className = `status-indicator ${value}`;
+            } else {
+                element.textContent = value;
+            }
+        }
+    </script>
+</body>
+</html>

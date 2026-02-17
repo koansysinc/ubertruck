@@ -1,0 +1,1803 @@
+openapi: 3.1.0
+info:
+  title: Ubertruck MVP API Reference
+  description: Complete REST API specification for Ubertruck Logistics Platform
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@ubertruck.in
+  license:
+    name: Proprietary
+    url: https://ubertruck.in/terms
+
+servers:
+  - url: https://api.ubertruck.in/v1
+    description: Production Server
+  - url: https://staging-api.ubertruck.in/v1
+    description: Staging Server
+  - url: http://localhost:3000/v1
+    description: Development Server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from /auth/login endpoint
+
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service-to-service communication
+
+  schemas:
+    # Common Schemas
+    Error:
+      type: object
+      required:
+        - code
+        - message
+        - timestamp
+        - requestId
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Z]{3}_[A-Z_]+$'
+          example: 'USR_NOT_FOUND'
+        message:
+          type: string
+          example: 'User not found with the provided ID'
+        details:
+          type: object
+          properties:
+            field:
+              type: string
+            reason:
+              type: string
+            suggestion:
+              type: string
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+        downstream:
+          type: object
+          properties:
+            service:
+              type: string
+            error:
+              type: string
+            statusCode:
+              type: integer
+
+    Location:
+      type: object
+      required:
+        - lat
+        - lng
+        - pincode
+      properties:
+        lat:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          example: 17.0005
+        lng:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          example: 79.5926
+        address:
+          type: string
+          maxLength: 500
+        landmark:
+          type: string
+          maxLength: 200
+        pincode:
+          type: string
+          pattern: '^[5][0-9]{5}$'
+          example: '508001'
+        city:
+          type: string
+          example: 'Nalgonda'
+        state:
+          type: string
+          example: 'Telangana'
+        plusCode:
+          type: string
+          pattern: '^[23456789CFGHJMPQRVWX]{8}\+[23456789CFGHJMPQRVWX]{2,3}$'
+
+    ContactPerson:
+      type: object
+      required:
+        - name
+        - phoneNumber
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        phoneNumber:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+          example: '+919876543210'
+        alternatePhone:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+
+    # User Management Schemas
+    UserRegistration:
+      type: object
+      required:
+        - phoneNumber
+        - userType
+        - businessName
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+        userType:
+          type: string
+          enum: [SHIPPER, CARRIER]
+        businessName:
+          type: string
+          minLength: 3
+          maxLength: 200
+        gstNumber:
+          type: string
+          pattern: '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$'
+        address:
+          $ref: '#/components/schemas/Location'
+
+    OTPVerification:
+      type: object
+      required:
+        - phoneNumber
+        - otp
+      properties:
+        phoneNumber:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+        otp:
+          type: string
+          pattern: '^\d{6}$'
+        sessionId:
+          type: string
+          format: uuid
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          example: 3600
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            phoneNumber:
+              type: string
+            businessName:
+              type: string
+            userType:
+              type: string
+            verified:
+              type: boolean
+
+    # Fleet Management Schemas
+    Vehicle:
+      type: object
+      required:
+        - registrationNumber
+        - vehicleType
+        - capacity
+      properties:
+        id:
+          type: string
+          format: uuid
+        registrationNumber:
+          type: string
+          pattern: '^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$'
+          example: 'TG01AB1234'
+        vehicleType:
+          type: string
+          enum: [TRUCK, MINI_TRUCK, TRAILER, CONTAINER]
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Capacity in tonnes
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+          minimum: 2000
+          maximum: 2025
+        fitnessValidUpto:
+          type: string
+          format: date
+        permitValidUpto:
+          type: string
+          format: date
+        insuranceValidUpto:
+          type: string
+          format: date
+        gpsEnabled:
+          type: boolean
+        currentLocation:
+          $ref: '#/components/schemas/Location'
+        vahanVerified:
+          type: boolean
+        vahanResponse:
+          type: object
+          description: Vahan API verification response
+
+    Driver:
+      type: object
+      required:
+        - name
+        - phoneNumber
+        - licenseNumber
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phoneNumber:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+        licenseNumber:
+          type: string
+          pattern: '^[A-Z]{2}[0-9]{2}[0-9]{11}$'
+        licenseValidUpto:
+          type: string
+          format: date
+        bloodGroup:
+          type: string
+          enum: [A+, A-, B+, B-, AB+, AB-, O+, O-]
+        emergencyContact:
+          $ref: '#/components/schemas/ContactPerson'
+        sarathiVerified:
+          type: boolean
+        sarathiResponse:
+          type: object
+
+    # Booking Management Schemas
+    BookingRequest:
+      type: object
+      required:
+        - pickupLocation
+        - deliveryLocation
+        - cargoDetails
+        - pickupTime
+      properties:
+        pickupLocation:
+          $ref: '#/components/schemas/Location'
+        deliveryLocation:
+          $ref: '#/components/schemas/Location'
+        pickupTime:
+          type: string
+          format: date-time
+        cargoDetails:
+          type: object
+          required:
+            - type
+            - weight
+            - description
+          properties:
+            type:
+              type: string
+              enum: [GENERAL, FRAGILE, HAZMAT, PERISHABLE, HEAVY]
+            weight:
+              type: number
+              minimum: 0.1
+              maximum: 50
+              description: Weight in tonnes
+            volume:
+              type: number
+              description: Volume in cubic meters
+            packages:
+              type: integer
+              minimum: 1
+            description:
+              type: string
+              maxLength: 1000
+            value:
+              type: number
+              description: Value for insurance in INR
+            hsnCode:
+              type: string
+              pattern: '^\d{4,8}$'
+              description: HSN code for E-Way Bill
+        invoiceDetails:
+          type: object
+          properties:
+            invoiceNumber:
+              type: string
+            invoiceDate:
+              type: string
+              format: date
+            invoiceValue:
+              type: number
+              minimum: 0
+        pickupContact:
+          $ref: '#/components/schemas/ContactPerson'
+        deliveryContact:
+          $ref: '#/components/schemas/ContactPerson'
+        specialInstructions:
+          type: string
+          maxLength: 500
+
+    BookingResponse:
+      type: object
+      properties:
+        bookingId:
+          type: string
+          format: uuid
+        bookingNumber:
+          type: string
+          pattern: '^BK[0-9]{10}$'
+        status:
+          type: string
+          enum: [CREATED, ASSIGNED, ACCEPTED, PICKUP_STARTED, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
+        estimatedPrice:
+          type: number
+        assignedVehicle:
+          $ref: '#/components/schemas/Vehicle'
+        assignedDriver:
+          $ref: '#/components/schemas/Driver'
+        ewayBillNumber:
+          type: string
+          pattern: '^\d{12}$'
+        estimatedDeliveryTime:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+
+    # Payment Schemas
+    PriceCalculation:
+      type: object
+      properties:
+        basePrice:
+          type: number
+        fuelSurcharge:
+          type: number
+        gst:
+          type: object
+          properties:
+            cgst:
+              type: number
+            sgst:
+              type: number
+            igst:
+              type: number
+            taxableAmount:
+              type: number
+        totalAmount:
+          type: number
+        priceBreakdown:
+          type: object
+          properties:
+            ratePerKm:
+              type: number
+            ratePerTonne:
+              type: number
+            minimumCharge:
+              type: number
+        validUntil:
+          type: string
+          format: date-time
+
+    Invoice:
+      type: object
+      properties:
+        invoiceNumber:
+          type: string
+          pattern: '^INV-[0-9]{4}-[0-9]{6}$'
+        bookingId:
+          type: string
+          format: uuid
+        invoiceDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        amount:
+          type: number
+        gstDetails:
+          type: object
+          properties:
+            shipperGstin:
+              type: string
+            carrierGstin:
+              type: string
+            hsnCode:
+              type: string
+            cgst:
+              type: number
+            sgst:
+              type: number
+            igst:
+              type: number
+        paymentStatus:
+          type: string
+          enum: [PENDING, PAID, PARTIALLY_PAID, OVERDUE]
+        pdfUrl:
+          type: string
+          format: uri
+
+    # Tracking Schemas
+    StatusUpdate:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [PICKUP_STARTED, IN_TRANSIT, DELIVERED, COMPLETED]
+        timestamp:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+        notes:
+          type: string
+          maxLength: 500
+        podImage:
+          type: string
+          format: byte
+          description: Base64 encoded POD image (max 2MB)
+        networkStatus:
+          type: string
+          enum: [online, offline]
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      operationId: registerUser
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: Registration initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  sessionId:
+                    type: string
+                    format: uuid
+                  otpExpiresIn:
+                    type: integer
+                    example: 300
+        '409':
+          description: Phone number already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/verify-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Verify OTP and complete registration
+      operationId: verifyOTP
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTPVerification'
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid or expired OTP
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many failed attempts
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: Seconds until retry allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login with phone number
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phoneNumber
+              properties:
+                phoneNumber:
+                  type: string
+                  pattern: '^\+91[6-9]\d{9}$'
+      responses:
+        '200':
+          description: OTP sent for login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  sessionId:
+                    type: string
+                    format: uuid
+        '404':
+          description: Phone number not registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      operationId: refreshToken
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: New access token generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expiresIn:
+                    type: integer
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # User Management Endpoints
+  /users/profile:
+    get:
+      tags:
+        - User Management
+      summary: Get current user profile
+      operationId: getUserProfile
+      responses:
+        '200':
+          description: User profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  phoneNumber:
+                    type: string
+                  businessName:
+                    type: string
+                  userType:
+                    type: string
+                  gstNumber:
+                    type: string
+                  address:
+                    $ref: '#/components/schemas/Location'
+                  bankDetails:
+                    type: object
+                    properties:
+                      accountNumber:
+                        type: string
+                      ifscCode:
+                        type: string
+                      verified:
+                        type: boolean
+                  createdAt:
+                    type: string
+                    format: date-time
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - User Management
+      summary: Update user profile
+      operationId: updateUserProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                businessName:
+                  type: string
+                gstNumber:
+                  type: string
+                address:
+                  $ref: '#/components/schemas/Location'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  updated:
+                    type: boolean
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /users/bank-details:
+    post:
+      tags:
+        - User Management
+      summary: Add or update bank details
+      operationId: updateBankDetails
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - accountNumber
+                - ifscCode
+                - accountHolderName
+              properties:
+                accountNumber:
+                  type: string
+                  pattern: '^\d{9,18}$'
+                ifscCode:
+                  type: string
+                  pattern: '^[A-Z]{4}0[A-Z0-9]{6}$'
+                accountHolderName:
+                  type: string
+      responses:
+        '200':
+          description: Bank details updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  verificationStatus:
+                    type: string
+                    enum: [PENDING, VERIFIED, FAILED]
+        '422':
+          description: Bank verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Fleet Management Endpoints
+  /fleet/vehicles:
+    get:
+      tags:
+        - Fleet Management
+      summary: List carrier's vehicles
+      operationId: listVehicles
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - in: query
+          name: available
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Vehicles retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Vehicle'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+                      pages:
+                        type: integer
+
+    post:
+      tags:
+        - Fleet Management
+      summary: Register new vehicle
+      operationId: registerVehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '201':
+          description: Vehicle registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '409':
+          description: Vehicle already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Vahan verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /fleet/vehicles/{vehicleId}:
+    get:
+      tags:
+        - Fleet Management
+      summary: Get vehicle details
+      operationId: getVehicle
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Vehicle details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Fleet Management
+      summary: Update vehicle details
+      operationId: updateVehicle
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Vehicle'
+      responses:
+        '200':
+          description: Vehicle updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Fleet Management
+      summary: Remove vehicle from fleet
+      operationId: deleteVehicle
+      parameters:
+        - in: path
+          name: vehicleId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Vehicle removed successfully
+        '404':
+          description: Vehicle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Vehicle has active bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /fleet/drivers:
+    get:
+      tags:
+        - Fleet Management
+      summary: List carrier's drivers
+      operationId: listDrivers
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: available
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Drivers retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Driver'
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      limit:
+                        type: integer
+                      total:
+                        type: integer
+
+    post:
+      tags:
+        - Fleet Management
+      summary: Register new driver
+      operationId: registerDriver
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Driver'
+      responses:
+        '201':
+          description: Driver registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Driver'
+        '409':
+          description: Driver already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: License verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Booking Management Endpoints
+  /bookings:
+    get:
+      tags:
+        - Booking Management
+      summary: List user's bookings
+      operationId: listBookings
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [CREATED, ASSIGNED, ACCEPTED, PICKUP_STARTED, IN_TRANSIT, DELIVERED, COMPLETED, CANCELLED]
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Bookings retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookingResponse'
+                  pagination:
+                    type: object
+
+    post:
+      tags:
+        - Booking Management
+      summary: Create new booking
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201':
+          description: Booking created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '422':
+          description: No trucks available or invalid route
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings/{bookingId}:
+    get:
+      tags:
+        - Booking Management
+      summary: Get booking details
+      operationId: getBooking
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Booking details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingResponse'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings/{bookingId}/cancel:
+    post:
+      tags:
+        - Booking Management
+      summary: Cancel booking
+      operationId: cancelBooking
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Booking cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  cancellationFee:
+                    type: number
+                  refundAmount:
+                    type: number
+        '422':
+          description: Booking cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /bookings/{bookingId}/price:
+    get:
+      tags:
+        - Booking Management
+      summary: Get price breakdown for booking
+      operationId: getBookingPrice
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Price details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCalculation'
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Tracking Endpoints
+  /tracking/{bookingId}/status:
+    get:
+      tags:
+        - Tracking
+      summary: Get current booking status
+      operationId: getTrackingStatus
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  currentStatus:
+                    type: string
+                  statusHistory:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StatusUpdate'
+                  estimatedDelivery:
+                    type: string
+                    format: date-time
+                  lastUpdate:
+                    type: string
+                    format: date-time
+        '404':
+          description: Booking not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Tracking
+      summary: Update booking status (Driver only)
+      operationId: updateTrackingStatus
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusUpdate'
+      responses:
+        '200':
+          description: Status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  currentStatus:
+                    type: string
+                  nextAllowedStatuses:
+                    type: array
+                    items:
+                      type: string
+                  notificationsSent:
+                    type: object
+                    properties:
+                      sms:
+                        type: boolean
+                      push:
+                        type: boolean
+        '403':
+          description: Not authorized to update status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid status transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tracking/{bookingId}/pod:
+    post:
+      tags:
+        - Tracking
+      summary: Upload Proof of Delivery
+      operationId: uploadPOD
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - podImage
+              properties:
+                podImage:
+                  type: string
+                  format: binary
+                  description: POD image (max 2MB, JPEG/PNG)
+                receiverName:
+                  type: string
+                receiverSignature:
+                  type: string
+                  format: byte
+                  description: Base64 encoded signature
+      responses:
+        '201':
+          description: POD uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  podUrl:
+                    type: string
+                    format: uri
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Invalid file type or booking status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Payment Endpoints
+  /payments/calculate:
+    post:
+      tags:
+        - Payments
+      summary: Calculate booking price
+      operationId: calculatePrice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - distance
+                - weight
+                - vehicleType
+              properties:
+                distance:
+                  type: number
+                  minimum: 1
+                  description: Distance in kilometers
+                weight:
+                  type: number
+                  minimum: 0.1
+                  description: Weight in tonnes
+                vehicleType:
+                  type: string
+                  enum: [TRUCK, MINI_TRUCK, TRAILER]
+                cargoType:
+                  type: string
+                pickupPincode:
+                  type: string
+                deliveryPincode:
+                  type: string
+                surcharges:
+                  type: object
+                  properties:
+                    fuelSurcharge:
+                      type: boolean
+                    nightDelivery:
+                      type: boolean
+                    urgentDelivery:
+                      type: boolean
+      responses:
+        '200':
+          description: Price calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceCalculation'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/invoices/{bookingId}:
+    get:
+      tags:
+        - Payments
+      summary: Get booking invoice
+      operationId: getInvoice
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Invoice retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '404':
+          description: Invoice not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Payments
+      summary: Generate invoice for booking
+      operationId: generateInvoice
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ewayBillNumber:
+                  type: string
+                  pattern: '^\d{12}$'
+      responses:
+        '201':
+          description: Invoice generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Invoice'
+        '409':
+          description: Invoice already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Booking not eligible for invoice
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /payments/settlements:
+    get:
+      tags:
+        - Payments
+      summary: List carrier settlements
+      operationId: listSettlements
+      parameters:
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [PENDING, PROCESSING, COMPLETED, FAILED]
+      responses:
+        '200':
+          description: Settlements retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        settlementId:
+                          type: string
+                        period:
+                          type: object
+                          properties:
+                            from:
+                              type: string
+                              format: date
+                            to:
+                              type: string
+                              format: date
+                        totalAmount:
+                          type: number
+                        bookingCount:
+                          type: integer
+                        status:
+                          type: string
+                        processedAt:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+
+  # E-Way Bill Endpoints
+  /eway-bill/generate:
+    post:
+      tags:
+        - E-Way Bill
+      summary: Generate E-Way Bill for booking
+      operationId: generateEwayBill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - bookingId
+                - hsnCode
+                - invoiceNumber
+                - invoiceDate
+                - invoiceValue
+              properties:
+                bookingId:
+                  type: string
+                  format: uuid
+                hsnCode:
+                  type: string
+                  pattern: '^\d{4,8}$'
+                invoiceNumber:
+                  type: string
+                invoiceDate:
+                  type: string
+                  format: date
+                invoiceValue:
+                  type: number
+                  minimum: 50000
+                transporterId:
+                  type: string
+                  pattern: '^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$'
+      responses:
+        '201':
+          description: E-Way Bill generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ewayBillNumber:
+                    type: string
+                    pattern: '^\d{12}$'
+                  validFrom:
+                    type: string
+                    format: date-time
+                  validUpto:
+                    type: string
+                    format: date-time
+                  qrCode:
+                    type: string
+                    format: byte
+        '422':
+          description: E-Way Bill generation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /eway-bill/{ewbNumber}/update-vehicle:
+    put:
+      tags:
+        - E-Way Bill
+      summary: Update Part-B vehicle details
+      operationId: updateEwayBillVehicle
+      parameters:
+        - in: path
+          name: ewbNumber
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{12}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - vehicleNumber
+                - fromPlace
+                - reasonCode
+              properties:
+                vehicleNumber:
+                  type: string
+                  pattern: '^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$'
+                fromPlace:
+                  type: string
+                reasonCode:
+                  type: integer
+                  enum: [1, 2, 4]
+                  description: '1-Breakdown, 2-Transhipment, 4-Others'
+      responses:
+        '200':
+          description: Vehicle details updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: boolean
+                  newValidUpto:
+                    type: string
+                    format: date-time
+        '404':
+          description: E-Way Bill not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Admin Endpoints
+  /admin/dashboard:
+    get:
+      tags:
+        - Admin
+      summary: Get admin dashboard metrics
+      operationId: getAdminDashboard
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Dashboard metrics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  metrics:
+                    type: object
+                    properties:
+                      totalBookings:
+                        type: integer
+                      activeBookings:
+                        type: integer
+                      totalRevenue:
+                        type: number
+                      totalUsers:
+                        type: integer
+                      totalVehicles:
+                        type: integer
+                      utilizationRate:
+                        type: number
+                  recentBookings:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BookingResponse'
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type:
+                          type: string
+                        message:
+                          type: string
+                        severity:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/reconciliation:
+    post:
+      tags:
+        - Admin
+      summary: Reconcile bank transactions
+      operationId: reconcileTransactions
+      security:
+        - BearerAuth: []
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - transactionId
+                - bookingId
+                - amount
+              properties:
+                transactionId:
+                  type: string
+                bookingId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                bankReference:
+                  type: string
+                reconciliationDate:
+                  type: string
+                  format: date
+      responses:
+        '200':
+          description: Transaction reconciled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  reconciled:
+                    type: boolean
+                  invoiceStatus:
+                    type: string
+        '409':
+          description: Transaction already reconciled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Admin access required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+# Webhooks
+webhooks:
+  statusUpdate:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+                location:
+                  $ref: '#/components/schemas/Location'
+      responses:
+        '200':
+          description: Webhook received
+
+  paymentReceived:
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId:
+                  type: string
+                  format: uuid
+                amount:
+                  type: number
+                transactionId:
+                  type: string
+                paymentMode:
+                  type: string
+      responses:
+        '200':
+          description: Webhook received

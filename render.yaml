@@ -1,0 +1,27 @@
+# Render.com Deployment Configuration
+# Deploy backend API to Render's free tier
+
+services:
+  - type: web
+    name: ubertruck-api
+    runtime: node
+    region: singapore  # Closest to your Neon database region
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false  # Will be set in Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: USE_MOCK_REDIS
+        value: true
+      - key: CORS_ORIGIN
+        value: https://ubertruck.vercel.app
+      - key: LOG_LEVEL
+        value: info

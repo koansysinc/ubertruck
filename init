@@ -1,0 +1,98 @@
+#!/bin/bash
+# Session Initialization Script for UberTruck MVP
+# Run this at the start of every Claude session
+
+set -e
+
+UBERTRUCK_DIR="/home/koans/projects/ubertruck"
+cd "$UBERTRUCK_DIR"
+
+echo "╔════════════════════════════════════════════════╗"
+echo "║   UberTruck MVP - Session Initialization      ║"
+echo "╚════════════════════════════════════════════════╝"
+echo ""
+
+# Step 1: Run verification hook
+echo "📋 Step 1: Running Verification Hook..."
+echo "─────────────────────────────────────────────────"
+./.claude-hooks/before-response.sh
+echo ""
+
+# Step 2: Show quick status
+echo "📊 Step 2: Quick Status Check..."
+echo "─────────────────────────────────────────────────"
+
+# Check if backend is running
+if curl -s http://localhost:4000/health > /dev/null 2>&1; then
+    echo "✅ Backend: RUNNING on port 4000"
+else
+    echo "❌ Backend: NOT RUNNING"
+    echo "   Start with: PORT=4000 USE_MOCK_DB=true USE_MOCK_REDIS=true node src/index.js"
+fi
+
+# Check if frontend is running
+if curl -s http://localhost:3000 > /dev/null 2>&1; then
+    echo "✅ Frontend: RUNNING on port 3000"
+else
+    echo "❌ Frontend: NOT RUNNING"
+    echo "   Start with: cd ubertruck-ui && SKIP_PREFLIGHT_CHECK=true TSC_COMPILE_ON_ERROR=true npm start"
+fi
+
+echo ""
+
+# Step 3: Show important files
+echo "📁 Step 3: Important Files to Read..."
+echo "─────────────────────────────────────────────────"
+echo "✅ CLAUDE.md - Mandatory protocol (auto-loaded)"
+echo "✅ CURRENT_STATE.json - Single source of truth"
+echo "✅ DEVELOPMENT_PROTOCOL.md - 10 strict rules"
+echo "✅ QUICK_START_GUIDE.md - Quick reference"
+echo "✅ test-frozen-requirements.sh - Automated tests"
+echo ""
+
+# Step 4: Protocol reminder
+echo "⚠️  Step 4: Protocol Reminder..."
+echo "─────────────────────────────────────────────────"
+echo "Before asking Claude to work:"
+echo ""
+echo "  1. Ask Claude to read CURRENT_STATE.json"
+echo "  2. Ask Claude to read DEVELOPMENT_PROTOCOL.md"
+echo "  3. Demand test output for any claims"
+echo "  4. Challenge phrases like 'should work' or 'probably'"
+echo ""
+
+# Step 5: Copy-paste instructions for Claude
+echo "💬 Step 5: Copy This to Claude..."
+echo "─────────────────────────────────────────────────"
+echo ""
+cat << 'EOF'
+Read the following files in this order:
+1. CURRENT_STATE.json - for current verified state
+2. DEVELOPMENT_PROTOCOL.md - for protocol rules
+3. CLAUDE.md - for project context
+
+Remember:
+- ✅ Test before claiming
+- ✅ Show test output
+- ✅ Update CURRENT_STATE.json after changes
+- ❌ No "should work" or "probably" phrases
+- ❌ No assumptions without verification
+
+What would you like me to work on?
+EOF
+echo ""
+echo "─────────────────────────────────────────────────"
+echo ""
+
+# Step 6: Summary
+echo "✨ Initialization Complete!"
+echo ""
+echo "Next steps:"
+echo "  • Copy the message above to Claude"
+echo "  • Start backend if not running"
+echo "  • Start frontend if not running"
+echo "  • Run tests: ./test-frozen-requirements.sh"
+echo ""
+echo "╔════════════════════════════════════════════════╗"
+echo "║          Ready for Development! 🚀             ║"
+echo "╚════════════════════════════════════════════════╝"

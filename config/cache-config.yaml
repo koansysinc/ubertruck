@@ -1,0 +1,18 @@
+# Cache Configuration
+# All values can be overridden via environment variables
+
+cache:
+  lambda:
+    ttl_seconds: ${LAMBDA_CACHE_TTL:-300}  # 5 minutes default
+  elasticache:
+    ttl_seconds: ${ELASTICACHE_TTL:-1800}  # 30 minutes default
+  redis:
+    default_ttl: ${REDIS_DEFAULT_TTL:-3600}  # 1 hour default
+
+compliance:
+  retention_years: ${RETENTION_YEARS:-7}  # 7 years default
+  audit_log_days: ${AUDIT_LOG_DAYS:-90}  # 90 days default
+
+rate_limiting:
+  requests_per_minute: ${RATE_LIMIT_RPM:-100}
+  burst_size: ${RATE_LIMIT_BURST:-20}
