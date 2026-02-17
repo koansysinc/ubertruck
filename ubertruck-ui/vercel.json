@@ -17,7 +17,7 @@
     }
   ],
   "env": {
-    "REACT_APP_API_BASE_URL": "https://ubertruck-api.onrender.com",
+    "REACT_APP_API_BASE_URL": "https://ubertruck.onrender.com",
     "REACT_APP_ENVIRONMENT": "production",
     "TSC_COMPILE_ON_ERROR": "true",
     "SKIP_PREFLIGHT_CHECK": "true"
