@@ -334,10 +334,50 @@ const commonValidation = {
   ]
 };
 
+/**
+ * Driver validation rules
+ */
+const validateDriverRegistration = [
+  body('phoneNumber')
+    .trim()
+    .notEmpty().withMessage('Phone number is required')
+    .custom(validatePhoneNumber).withMessage('Invalid phone number format'),
+  body('fullName')
+    .trim()
+    .notEmpty().withMessage('Full name is required'),
+  body('licenseNumber')
+    .trim()
+    .notEmpty().withMessage('License number is required'),
+  body('vehicleNumber')
+    .trim()
+    .notEmpty().withMessage('Vehicle number is required'),
+  body('vehicleType')
+    .trim()
+    .notEmpty().withMessage('Vehicle type is required')
+    .isIn(['10T', '15T', '20T']).withMessage('Invalid vehicle type'),
+  body('aadharNumber')
+    .trim()
+    .notEmpty().withMessage('Aadhar number is required')
+    .isLength({ min: 12, max: 12 }).withMessage('Aadhar must be 12 digits'),
+  body('panNumber')
+    .trim()
+    .notEmpty().withMessage('PAN number is required'),
+  handleValidationErrors
+];
+
+const validateTripAction = [
+  body('bookingId')
+    .trim()
+    .notEmpty().withMessage('Booking ID is required'),
+  handleValidationErrors
+];
+
 module.exports = {
   userValidation,
   bookingValidation,
   fleetValidation,
   commonValidation,
-  handleValidationErrors
+  handleValidationErrors,
+  validateDriverRegistration,
+  validateTripAction
 };

@@ -164,6 +164,10 @@ app.use('/api/v1/location', locationRoutes);
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/v1/notifications', notificationRoutes);
 
+// Driver routes
+const driverRoutes = require('./routes/driverRoutes');
+app.use('/api/v1/drivers', driverRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   logger.error({

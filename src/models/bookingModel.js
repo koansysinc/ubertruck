@@ -558,6 +558,145 @@ class BookingModel {
       return booking;
     });
   }
+
+  /**
+   * Find booking by ID (alias for getBookingById)
+   */
+  static async findById(bookingId) {
+    return await this.getBookingById(bookingId);
+  }
+
+  /**
+   * Get nearby unassigned bookings for drivers
+   */
+  static async getNearbyUnassignedBookings(params) {
+    const { latitude, longitude, vehicleType, radius = 10 } = params;
+
+    const sql = `
+      SELECT
+        b.*,
+        (6371 * acos(cos(radians($1)) * cos(radians(b.pickup_lat)) *
+         cos(radians(b.pickup_lng) - radians($2)) +
+         sin(radians($1)) * sin(radians(b.pickup_lat)))) AS distance
+      FROM bookings b
+      WHERE b.status = 'pending'
+        AND b.driver_id IS NULL
+        AND (6371 * acos(cos(radians($1)) * cos(radians(b.pickup_lat)) *
+             cos(radians(b.pickup_lng) - radians($2)) +
+             sin(radians($1)) * sin(radians(b.pickup_lat)))) < $3
+      ORDER BY distance ASC
+      LIMIT 10
+    `;
+
+    const result = await query(sql, [latitude, longitude, radius]);
+    return result.rows;
+  }
+
+  /**
+   * Assign driver to booking
+   */
+  static async assignDriver(bookingId, driverInfo) {
+    const sql = `
+      UPDATE bookings
+      SET driver_id = $2,
+          driver_name = $3,
+          driver_phone = $4,
+          vehicle_number = $5,
+          status = $6,
+          assigned_at = $7
+      WHERE booking_id = $1
+      RETURNING *
+    `;
+
+    const result = await query(sql, [
+      bookingId,
+      driverInfo.driver_id,
+      driverInfo.driver_name,
+      driverInfo.driver_phone,
+      driverInfo.vehicle_number,
+      driverInfo.status,
+      driverInfo.assigned_at
+    ]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * Update booking status (simplified version for drivers)
+   */
+  static async updateStatus(bookingId, updates) {
+    const fields = [];
+    const values = [];
+    let index = 1;
+
+    for (const [key, value] of Object.entries(updates)) {
+      fields.push(`${key} = $${index}`);
+      values.push(value);
+      index++;
+    }
+
+    values.push(bookingId);
+    const sql = `
+      UPDATE bookings
+      SET ${fields.join(', ')}
+      WHERE booking_id = $${index}
+      RETURNING *
+    `;
+
+    const result = await query(sql, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Get driver trip history
+   */
+  static async getDriverTripHistory(driverId, options = {}) {
+    const { page = 1, limit = 20 } = options;
+    const offset = (page - 1) * limit;
+
+    const sql = `
+      SELECT
+        b.booking_id,
+        b.booking_number,
+        b.pickup_address,
+        b.delivery_address,
+        b.distance_km,
+        b.driver_earnings,
+        b.status,
+        b.assigned_at,
+        b.delivered_at,
+        b.cargo_type,
+        b.cargo_weight
+      FROM bookings b
+      WHERE b.driver_id = $1
+        AND b.status IN ('delivered', 'cancelled')
+      ORDER BY b.created_at DESC
+      LIMIT $2 OFFSET $3
+    `;
+
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM bookings
+      WHERE driver_id = $1
+        AND status IN ('delivered', 'cancelled')
+    `;
+
+    const [trips, countResult] = await Promise.all([
+      query(sql, [driverId, limit, offset]),
+      query(countSql, [driverId])
+    ]);
+
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data: trips.rows,
+      page,
+      limit,
+      total,
+      totalPages
+    };
+  }
 }
 
 module.exports = BookingModel;
